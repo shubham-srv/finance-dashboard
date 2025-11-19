@@ -1,0 +1,45 @@
+name: Docker Build & Test
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: finance-dashboard:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test container startup
+      run: |
+        docker run -d --name test-container -p 3000:3000 finance-dashboard:test
+        sleep 10
+        curl -f http://localhost:3000 || exit 1
+        docker logs test-container
+        docker stop test-container
+
+    - name: Image size check
+      run: |
+        SIZE=$(docker image inspect finance-dashboard:test --format='{{.Size}}' | awk '{print $1/1024/1024}')
+        echo "Image size: ${SIZE}MB"
+        if (( $(echo "$SIZE > 500" | bc -l) )); then
+          echo "Warning: Image size is larger than 500MB"
+        fi
+

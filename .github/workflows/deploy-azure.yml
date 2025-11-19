@@ -1,0 +1,56 @@
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AZURE_CONTAINER_APP_NAME: finance-dashboard-app
+  AZURE_RESOURCE_GROUP: finance-dashboard-rg
+  AZURE_CONTAINER_REGISTRY: financedashboardacr
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to Azure
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push to ACR
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+    
+    - name: Build and push Docker image
+      run: |
+        docker build -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:${{ github.sha }} .
+        docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:${{ github.sha }}
+        docker tag ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:${{ github.sha }} \
+                   ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:latest
+        docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:latest
+
+    - name: Deploy to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppName: ${{ env.AZURE_CONTAINER_APP_NAME }}
+        resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
+        imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:${{ github.sha }}
+
+    - name: Deployment Summary
+      run: |
+        echo "✅ Deployment successful!"
+        echo "Image: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/finance-dashboard:${{ github.sha }}"
+        echo "Container App: ${{ env.AZURE_CONTAINER_APP_NAME }}"
+        echo "Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+

@@ -136,9 +136,43 @@ npm start
 
 ## Deploy
 
+### Option 1: Docker Deployment (AWS/Azure)
+
+The project includes Docker support for container-based deployments:
+
+```bash
+# Build Docker image
+docker build -t finance-dashboard:latest .
+
+# Run locally
+docker run -p 3000:3000 finance-dashboard:latest
+
+# Or use Docker Compose
+docker-compose up -d
+```
+
+**Supported Platforms:**
+- AWS ECS (Elastic Container Service)
+- AWS App Runner
+- Azure Container Instances
+- Azure Container Apps
+- Azure App Service for Containers
+- Any Kubernetes cluster
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions on deploying to AWS or Azure.
+
+### Option 2: Serverless Deployment
+
 Deploy easily to Vercel, Netlify, or any platform that supports Next.js:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+## CI/CD
+
+GitHub Actions workflows are included for automated deployment:
+- `.github/workflows/deploy-aws.yml` - Deploy to AWS ECS
+- `.github/workflows/deploy-azure.yml` - Deploy to Azure Container Apps
+- `.github/workflows/docker-build.yml` - Test Docker builds on PR
 
 ## License
 
